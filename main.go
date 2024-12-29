@@ -7,11 +7,20 @@ import (
 )
 
 func main() {
+	// genesisblock
 	genesisBlockchain := block.CreateBlockchainWithGenesisBlock()
+	//fmt.Println(genesisBlockchain) // &{[0xc000076060]}
+	//fmt.Println(genesisBlockchain.Blocks[0])
+
+	// newblock
+	genesisBlockchain.AddBlockToBlockchain("1=>2", genesisBlockchain.Blocks[len(genesisBlockchain.Blocks)-1].Height+1, genesisBlockchain.Blocks[len(genesisBlockchain.Blocks)-1].Hash)
+
+	genesisBlockchain.AddBlockToBlockchain("2=>3", genesisBlockchain.Blocks[len(genesisBlockchain.Blocks)-1].Height+1, genesisBlockchain.Blocks[len(genesisBlockchain.Blocks)-1].Hash)
+
+	genesisBlockchain.AddBlockToBlockchain("3=>4", genesisBlockchain.Blocks[len(genesisBlockchain.Blocks)-1].Height+1, genesisBlockchain.Blocks[len(genesisBlockchain.Blocks)-1].Hash)
 	fmt.Println(genesisBlockchain) // &{[0xc000076060]}
-	fmt.Println(genesisBlockchain.Blocks[0])
-	// {1 [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
-	// [71 101 110 101 115 105 115 32 98 108 111 99 107 32 68 97 116 97 46 46 46]
-	// 1723208163
-	// [243 105 111 102 243 102 209 248 15 69 240 134 180 66 147 40 80 118 59 31 68 147 41 56 105 152 50 26 138 189 23 254]}
+	fmt.Println("block0=>", genesisBlockchain.Blocks[0])
+	fmt.Println("block2=>", genesisBlockchain.Blocks[1])
+	fmt.Println("block3=>", genesisBlockchain.Blocks[2])
+	fmt.Println("block4=>", genesisBlockchain.Blocks[3])
 }

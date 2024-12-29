@@ -95,3 +95,38 @@
     block := block.CreateGenesisBlock("Genesis Block")
     fmt.Println("Genesis block = ", block)
 
+## 3. Add Genesis Block to Blockchain
+
+* A blockchain is composed of many blocks, and the genesis block is the first block of the blockchain.
+
+* Blockchain.go
+
+  * Blockchain struct
+
+    * ```go
+    type Blockchain struct {
+    	Blocks []*Block // Stores ordered blocks
+    }
+
+  * Create blockchain with Genesis block
+
+    * ```go
+      func CreateBlockchainWithGenesisBlock() *Blockchain {
+      	GenesisBlock := CreateGenesisBlock("Genesis block Data...")
+      	return &Blockchain{Blocks: []*Block{GenesisBlock}}
+      }
+      ```
+
+* Add block to blckchain
+
+  * ```go
+    func (blockchain *Blockchain) AddBlockToBlockchain(data string, height int64, prevHash []byte) {
+    	newBlock := NewBlock(data, height, prevHash)
+    	// Adds blocks to the chain array
+    	blockchain.Blocks = append(blockchain.Blocks, newBlock)
+    }
+    ```
+
+    
+
+## 4. Proof Of Work(POW)
