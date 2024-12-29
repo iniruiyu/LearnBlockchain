@@ -3,7 +3,6 @@ package block
 import (
 	"bytes"
 	"crypto/sha256"
-	"fmt"
 	"strconv"
 	"time"
 )
@@ -31,7 +30,7 @@ func (block *Block) SetHash() {
 	// 第二个参数范围为2~36，代表进制
 	timeString := strconv.FormatInt(block.Timestamp, 2)
 	timebytes := []byte(timeString)
-	fmt.Println("SetHash timeString", timeString, "----- timebytes := ", timebytes, "------ heightBytes:=", heightBytes)
+	//fmt.Println("SetHash timeString", timeString, "----- timebytes := ", timebytes, "------ heightBytes:=", heightBytes)
 	// 3.拼接所有属性
 	blockbytes := bytes.Join([][]byte{heightBytes, block.PrevBlockHash, block.Data, timebytes, block.Hash}, []byte{})
 	// 4.生成hash
@@ -51,7 +50,7 @@ func NewBlock(data string, height int64, prevBlockHash []byte) *Block {
 		Timestamp:     time.Now().Unix(),
 		Hash:          nil,
 	}
-	fmt.Println("old block = ", block)
+	//fmt.Println("old block = ", block)
 	// 设置hash
 	block.SetHash()
 	return block

@@ -1,6 +1,6 @@
 # LearnBlockchain
 
-## 1.Create block struct
+## 1. Create block struct
 
 * block struct
 
@@ -26,11 +26,11 @@
     func (block *Block) SetHash() {
     
     	// 1. Convert Height to a byte array
-        // use IntToHex() Function
+    	// use IntToHex() Function
     	heightBytes := IntToHex(block.Height)
     	// 2.Converts Timestamp to a byte array
-        // 2.1  strconv.FormatInt()  
-        // The first parameter converts int64 to a string
+    	// 2.1  strconv.FormatInt()  
+    	// The first parameter converts int64 to a string
     	// The second parameter ranges from 2 to 36, representing the base system
     	timeString := strconv.FormatInt(block.Timestamp, 2)
     	timebytes := []byte(timeString)
@@ -76,7 +76,7 @@
     }
     ```
 
-## 2. Genesis Block
+## 2. Create Genesis Block
 
 * The Genesis block is the first block of the blockchain. 
 
@@ -86,7 +86,7 @@
     // Create Genesis Block
     func CreateGenesisBlock(data string) *Block {
     	// create [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-        // 32-bit byte array 
+    	// 32-bit byte array 
     	var ZeroBlockHash [32]byte
     	return NewBlock(data, 1, ZeroBlockHash[:])
     }
