@@ -1,9 +1,6 @@
 package block
 
 import (
-	"bytes"
-	"crypto/sha256"
-	"strconv"
 	"time"
 )
 
@@ -18,10 +15,13 @@ type Block struct {
 	Timestamp int64
 	// 5. Hash
 	Hash []byte
+
+	// 6.nonce （proof of work）
+	Nonce int64
 }
 
 // 2. 区块设置自己的hash
-func (block *Block) SetHash() {
+/* func (block *Block) SetHash() {
 
 	// 1.将Height 转化为字节数组
 	heightBytes := IntToHex(block.Height)
@@ -38,7 +38,7 @@ func (block *Block) SetHash() {
 
 	// 处理 HashValue是32字节
 	block.Hash = HashValue[:]
-}
+} */
 
 // 1. 创建新的区块
 func NewBlock(data string, height int64, prevBlockHash []byte) *Block {
@@ -52,7 +52,16 @@ func NewBlock(data string, height int64, prevBlockHash []byte) *Block {
 	}
 	//fmt.Println("old block = ", block)
 	// 设置hash
-	block.SetHash()
+	//block.SetHash()
+
+	// 调用工作量证明方法，返回有效hash和Nonce值
+	pow := NewProofOfWork(block)
+	//000000
+	// 挖矿验证
+	hash, nonce := pow.Run()
+
+	block.Hash = hash[:]
+	block.Nonce = nonce
 	return block
 }
 

@@ -104,9 +104,10 @@
   * Blockchain struct
 
     * ```go
-    type Blockchain struct {
-    	Blocks []*Block // Stores ordered blocks
-    }
+    	type Blockchain struct {
+    		Blocks []*Block // Stores ordered blocks
+    	}
+    	```
 
   * Create blockchain with Genesis block
 
@@ -130,3 +131,136 @@
     
 
 ## 4. Proof Of Work(POW)
+
+* **Proof of Work (PoW)** is the earliest consensus algorithm adopted in blockchain technology.
+
+* How It Works
+
+  * <details><summary>Puzzle Solving</summary>难题计算</details>
+
+  * <details><summary>Simple Verification</summary>验证简单</details>
+
+  * <details><summary>Reward Mechanism</summary>奖励机制</details>
+
+
+
+* Create Proof Of Work Struct
+
+  * ```go
+    type ProofOfWork struct {
+    	Block *Block // The block to validate
+        Target *big.Int // Big Data Storage
+        // Represents the difficulty of our data
+    	// int64 may overflow its range larger
+    }
+    ```
+
+* Difficulty
+
+  * ```go
+    // Difficulty
+    // 0000 0000 0000 0000 1001 0001 0000 .... 0001
+    // A 256-bits Hash must have at least 16/targetBit zeroes in front of it
+    const targetBit = 16
+    ```
+
+* Run()
+
+  1. Concatenate the properties of the Block into a byte array
+  2. Generate hash
+  3. If the hash is valid, the result is returned
+
+  * ```go
+    func (proofOfWork *ProofOfWork) Run() ([]byte, int64) {
+    	var hashInt big.Int // Store our newly generated hash value
+    	var hash [32]byte
+    	for nonce := 0; ; nonce++ {
+    		// 1. prepare Data
+    		dataBytes := proofOfWork.prepareData(nonce)
+    		// 2. Generate hash
+    		hash = sha256.Sum256(dataBytes)
+    		fmt.Printf("\r%x", hash)
+    		// 2.2. Store in HashInt
+    		hashInt.SetBytes(hash[:])
+    		// 3. Checking the Validity of generate hash
+    
+    		/*	func (x *big.Int) Cmp(y *big.Int) (r int)
+    			Cmp compares x and y and returns:
+    				-1 if x <  y
+    				 0 if x == y
+    				+1 if x >  y
+    		*/
+    		if proofOfWork.Target.Cmp(&hashInt) == 1 {
+    			fmt.Println()
+    			return hash[:], int64(nonce)
+    		}
+    	}
+    }
+    
+    // Concatenate the properties of the Block into a byte array.
+    func (pow *ProofOfWork) prepareData(nonce int) []byte {
+    	data := bytes.Join(
+    		[][]byte{
+    			pow.Block.PrevBlockHash,
+    			pow.Block.Data,
+    			IntToHex(pow.Block.Timestamp),
+    			IntToHex(int64(pow.Block.Height)),
+    			IntToHex(int64(targetBit)),
+    			IntToHex(int64(nonce)),
+    		},
+    		[]byte{},
+    	)
+    	return data
+    }
+    ```
+
+  * Create a new proof of work object
+
+    ```go
+    func NewProofOfWork(Block *Block) *ProofOfWork {
+    	/* target two 0
+    	0000 0001
+    	Shift left(8-2 =6) bit
+    	0100 0000  =64
+    	0010 0000  =32
+    	< Just move it two places to the left ,32
+    	*/
+    	// 1.Create a taget with an initial value of 1
+    	target := big.NewInt(1)
+    	// 2.Shift 256-targetBit to the left
+    	target = target.Lsh(target, 256-targetBit)
+    	return &ProofOfWork{Block: Block, Target: target}
+    }
+    ```
+
+* Verify that the hash is valid
+  ```go
+  // Determine whether the generated hash is preceded by Target zeros
+  func (proofOfWork *ProofOfWork) IsVaild() bool {
+  	/* 	proofOfWork.Block.Hash
+  	   	proofOfWork.Target */
+  	var hashInt big.Int
+  	hashInt.SetBytes(proofOfWork.Block.Hash)
+  	/* func (x *big.Int) Cmp(y *big.Int) (r int)
+  	mp compares x and y and returns:
+  		-1 if x <  y
+  		 0 if x == y
+  		+1 if x >  y */
+  	return proofOfWork.Target.Cmp(&hashInt) == 1
+  }
+  
+  func main() {
+  	block1 := block.NewBlock("text", 1, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+  	fmt.Println("block.nonce=", block1.Nonce)
+  	fmt.Println("block.hash =", block1.Hash)
+  
+  	// The upper block has been verified, quick verification
+  	pow := block.NewProofOfWork(block1)
+  	fmt.Println("is vaied", pow.IsVaild())
+  }
+  ```
+
+  
+
+## 5. Serialize
+
