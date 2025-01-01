@@ -148,14 +148,16 @@
 
   * ```go
     type ProofOfWork struct {
-    	Block *Block // The block to validate
-        Target *big.Int // Big Data Storage
-        // Represents the difficulty of our data
-    	// int64 may overflow its range larger
+            Block *Block // The block to validate
+            Target *big.Int // Big Data Storage
+            // Represents the difficulty of our data
+            // int64 may overflow its range larger
     }
     ```
 
 * Difficulty
+
+  * After running, 0000 0000 0000 0000 1001 0001 0000 .... 0001 is shifted **256-targetBit** to the left
 
   * ```go
     // Difficulty
@@ -227,7 +229,7 @@
     	*/
     	// 1.Create a taget with an initial value of 1
     	target := big.NewInt(1)
-    	// 2.Shift 256-targetBit to the left
+    	// 2.Shift 256-target Bit to the left
     	target = target.Lsh(target, 256-targetBit)
     	return &ProofOfWork{Block: Block, Target: target}
     }
@@ -253,10 +255,9 @@
   	block1 := block.NewBlock("text", 1, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
   	fmt.Println("block.nonce=", block1.Nonce)
   	fmt.Println("block.hash =", block1.Hash)
-  
   	// The upper block has been verified, quick verification
   	pow := block.NewProofOfWork(block1)
-  	fmt.Println("is vaied", pow.IsVaild())
+  	fmt.Println("is vaied", pow.IsVaild())	//true
   }
   ```
 
@@ -264,3 +265,114 @@
 
 ## 5. Serialize
 
+* To store blocks on disk, serialization is needed
+
+* block.go
+
+* ```go
+  // use "encoding/gob" 
+  // Serialize the block into a byte array
+  func (block *Block) Serialize() []byte {
+  	var result bytes.Buffer
+  	encoder := gob.NewEncoder(&result)
+  	err := encoder.Encode(block)
+  	if err != nil {
+  		log.Panic(err)
+  	}
+  	return result.Bytes()
+  }
+  
+  // Deserializing the byte array returns the block structure
+  func DeSerializeBlock(blockBytes []byte) *Block {
+  	var block Block
+  	decoder := gob.NewDecoder(bytes.NewReader(blockBytes))
+  	err := decoder.Decode(&block)
+  	if err != nil {
+  		log.Panic(err)
+  	}
+  	return &block
+  }
+  ```
+
+
+
+## 6. DataBase
+
+* "github.com/boltdb/bolt"
+
+* Introduction
+
+  * CreateTable
+  
+  * ```go
+    package main
+    
+    import (	"github.com/boltdb/bolt")
+    
+    func main() {
+    	// Open the my.db data file in your current directory.
+    	// It will be created if it doesn't exist.
+    	db, err := bolt.Open("my.db", 0600, nil)
+    	if err != nil {
+    		log.Fatal(err)
+    	}
+    	err = db.Update(func(tx *bolt.Tx) error {
+    		// 1. create BlockBucket Table
+    		b, err := tx.CreateBucket([]byte("BlockBucket"))
+            
+    		if err != nil {return fmt.Errorf("create bucket error,%s", err)}
+    		// 2. Putting data into a table, in key-value pairs
+    		if b != nil {
+                err := b.Put([]byte("1"), []byte("Send 100 to 2"))
+    			if err != nil {log.Panic("Save data to bucket error", err)}
+    		}
+    		return nil
+    	})
+    	defer db.Close()
+    
+    }
+    ```
+  
+  * GetTable
+  
+    * ```go
+      func main() {
+      	// Open the my.db data file in your current directory.
+      	// It will be created if it doesn't exist.
+      	db, err := bolt.Open("my.db", 0600, nil)
+      	if err != nil {
+      		log.Fatal(err)
+      	}
+      	err = db.Update(func(tx *bolt.Tx) error {
+      		// 1. Get BlockBucket Table
+      		b := tx.Bucket([]byte("BlockBucket"))
+      
+      		// 2. Putting data into a table, in key-value pairs
+      		if b != nil {
+      			err := b.Put([]byte("1"), []byte("Send 100 to 2"))
+      			if err != nil {log.Panic("Save data to bucket error", err)}
+      		}
+      		return nil
+      	})
+      	defer db.Close()
+      }
+      ```
+  
+  * ViewTable
+  
+    * ```go
+      	// ViewTable
+      	err = db.View(func(tx *bolt.Tx) error {
+      		b := tx.Bucket([]byte("BlockBucket"))
+      		if b != nil {
+      			key1 := b.Get([]byte("1"))
+      			fmt.Println(key1)
+      		}
+      		return nil
+      	})
+      ```
+  
+
+### 6.1 code
+
+* 

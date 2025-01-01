@@ -1,6 +1,9 @@
 package block
 
 import (
+	"bytes"
+	"encoding/gob"
+	"log"
 	"time"
 )
 
@@ -70,4 +73,26 @@ func CreateGenesisBlock(data string) *Block {
 	// 高度 hash可知
 	var csqk [32]byte
 	return NewBlock(data, 1, csqk[:])
+}
+
+// 将区块序列化成字节数组
+func (block *Block) Serialize() []byte {
+	var result bytes.Buffer
+	encoder := gob.NewEncoder(&result)
+	err := encoder.Encode(block)
+	if err != nil {
+		log.Panic(err)
+	}
+	return result.Bytes()
+}
+
+// 反序列化字节数组成区块
+func DeSerializeBlock(blockBytes []byte) *Block {
+	var block Block
+	decoder := gob.NewDecoder(bytes.NewReader(blockBytes))
+	err := decoder.Decode(&block)
+	if err != nil {
+		log.Panic(err)
+	}
+	return &block
 }
