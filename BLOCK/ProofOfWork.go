@@ -34,20 +34,6 @@ func (pow *ProofOfWork) prepareData(nonce int) []byte {
 	return data
 }
 
-// 判断hash是否有效
-func (proofOfWork *ProofOfWork) IsVaild() bool {
-	/* 	proofOfWork.Block.Hash
-	   	proofOfWork.Target */
-	var hashInt big.Int
-	hashInt.SetBytes(proofOfWork.Block.Hash)
-	/*Cfunc (x *big.Int) Cmp(y *big.Int) (r int)
-	mp compares x and y and returns:
-		-1 if x <  y
-		 0 if x == y
-		+1 if x >  y */
-	return proofOfWork.Target.Cmp(&hashInt) == 1
-}
-
 func (proofOfWork *ProofOfWork) Run() ([]byte, int64) {
 	// 1. 将Block的属性，拼接成字节数组
 	//dataBytes := proofOfWork.prepareData()
@@ -81,7 +67,8 @@ func (proofOfWork *ProofOfWork) Run() ([]byte, int64) {
 			return hash[:], int64(nonce)
 		}
 	}
-	//return nil, 0
+	fmt.Println()
+	return nil, 0
 }
 
 // 创建新的工作量证明对象

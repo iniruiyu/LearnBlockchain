@@ -373,6 +373,134 @@
       ```
   
 
-### 6.1 code
+## 7. Save Genesis Block To BoltDB
 
-* 
+* Persistence store
+
+* Blockchain uses db object, just need to add db object to blockchain property.
+
+* Modify Blockchain Struct
+
+  * ```go
+    const dbName = "blockchain.db"
+    const blockTableName = "block"
+    
+    type Blockchain struct {
+    	Tip []byte   // The hash of the latest block
+    	DB  *bolt.DB // Database
+    }
+    ```
+
+* Modify CreateBlockchainWithGenesisBlock() Function
+
+  * ```go
+    func CreateBlockchainWithGenesisBlock() *Blockchain {
+    	var blockHash []byte
+    	// Create or open the database
+    	db, err := bolt.Open(dbName, 0600, nil)
+    	if err != nil {
+    		log.Fatal(err)
+    	}
+    	defer db.Close()
+    	err = db.Update(func(tx *bolt.Tx) error {
+    		b, err := tx.CreateBucket([]byte(blockTableName))
+    		if err != nil {
+    			log.Panic(err)
+    		}
+    		//The table exists
+    		if b != nil {
+    			// Create GenisisBlock
+    			GenesisBlock := CreateGenesisBlock("Genesis block Data...")
+    			// Store the Genesis block in a table
+    			err := b.Put(GenesisBlock.Hash, GenesisBlock.Serialize())
+    			if err != nil {
+    				log.Panic(err)
+    			}
+    			// Store the hash of the latest block
+    			err = b.Put([]byte("TipBlockHash"), GenesisBlock.Hash)
+    			if err != nil {
+    				log.Panic(err)
+    			}
+    			blockHash = GenesisBlock.Hash
+    		}
+    		return nil
+    	})
+    	return &Blockchain{blockHash, db}
+    }
+    ```
+
+## 8. Add New Block To BoltDb
+
+* ```go
+  func (blockchain *Blockchain) AddBlockToBlockchain(data string) {
+  	blockchain.DB.Update(func(tx *bolt.Tx) error {
+  		// 1. Get Bucket
+  		b := tx.Bucket([]byte(blockTableName))
+  		// 2. Create New Block
+  		if b != nil {
+  			// 1. **Get The Latest Block**
+  			TipBlockBytes := b.Get(blockchain.Tip)
+  			// 2. DeSerialize
+  			TipBlock := DeSerializeBlock(TipBlockBytes)
+  			// 3. Create New Block 
+  			newBlock := NewBlock(data, TipBlock.Height+1, TipBlock.Hash)
+              // 4. Serialize New Block ,place it in the obtained table
+  			err := b.Put(newBlock.Hash, newBlock.Serialize())
+  			if err != nil {
+  				log.Panic(err)
+  			}
+  			// Store the hash of the latest block
+  			err = b.Put([]byte("TipBlockHash"), newBlock.Hash)
+  			if err != nil {
+  				log.Panic(err)
+  			}
+  		}
+  		return nil
+  	})
+  
+  }
+  ```
+
+  
+
+## 9. Print Blockchain Info
+
+* Iterate over all blocks to output information
+  ```go
+  func (blockchain *Blockchain) PrintBlockchain() {
+  
+  	var block *Block
+  	var currentHash []byte = blockchain.Tip
+  	for {
+  		err := blockchain.DB.Update(func(tx *bolt.Tx) error {
+  			// 1.Get Bucket
+  			b := tx.Bucket([]byte(blockTableName))
+  			if b != nil {
+  				// Gets the byte array of the current block
+  				blockBytes := b.Get(currentHash)
+                  // DeSerializeBlock
+  				block = DeSerializeBlock(blockBytes)
+  				fmt.Printf("Height:%d\n", block.Height)
+  				fmt.Printf("PrevBlockHash:%x\n", block.PrevBlockHash)
+  				fmt.Printf("Data:%s\n", block.Data)
+  				fmt.Printf("Timestamp:%d\n", block.Timestamp)
+  				fmt.Printf("Hash:%x\n", block.Hash)
+  				fmt.Printf("Nonce:%d\n", block.Nonce)
+  			}
+  			return nil
+  		})
+  		if err != nil {
+  			log.Panic(err)
+  		}
+  		var hashInt big.Int
+  		hashInt.SetBytes(block.PrevBlockHash)
+  		if big.NewInt(0).Cmp(&hashInt) == 0 {
+  			break
+  		}
+          // Iterate
+  		currentHash = block.PrevBlockHash
+  	}
+  }
+  ```
+
+  
