@@ -504,4 +504,66 @@
   }
   ```
 
-  
+
+
+## 10. Iterator
+
+Write an iterator that optimizes the above code to reduce repetition
+
+* Iterator Struct
+
+* ```go
+  type BlockchainIterator struct {
+  	CurrentHash []byte   // The latest Block Hash
+  	DB          *bolt.DB // DB
+  }
+  // Get the next block
+  func (blockchainIterator *BlockchainIterator) NextPrevBlock() *Block {
+  	var currentBlock *Block
+  	err := blockchainIterator.DB.View(func(tx *bolt.Tx) error {
+  		b := tx.Bucket([]byte(blockTableName))
+  		if b != nil {
+  			currentBlockBytes := b.Get(blockchainIterator.CurrentHash)
+  			// The block corresponding to the current iterator Hash is retrieved
+  			currentBlock = DeSerializeBlock(currentBlockBytes)
+  			blockchainIterator.CurrentHash = currentBlock.PrevBlockHash
+  		}
+  		return nil
+  	})
+  	if err != nil {
+  		log.Panic(err)
+  	}
+  	return currentBlock
+  }
+  // Get the blockchain iterator object
+  func (blockchain *Blockchain) Iterator() *BlockchainIterator {
+  	return &BlockchainIterator{blockchain.Tip, blockchain.DB}
+  }
+  ```
+
+* Modify PrintBlockchain()
+
+  * ```go
+    func (blockchain *Blockchain) PrintBlockchain() {
+    
+    	blockchainIterator := blockchain.Iterator()
+    	for {
+    		block := blockchainIterator.NextPrevBlock()
+    		fmt.Printf("Height:%d\n", block.Height)
+    		fmt.Printf("PrevBlockHash:%x\n", block.PrevBlockHash)
+    		fmt.Printf("Data:%s\n", block.Data)
+    		fmt.Printf("Timestamp:%s\n", time.Unix(block.Timestamp, 0).Format("2006-01-02 15:04:05 PM"))
+    		fmt.Printf("Hash:%x\n", block.Hash)
+    		fmt.Printf("Nonce:%d\n\n", block.Nonce)
+    		var hashInt big.Int
+    		hashInt.SetBytes(block.PrevBlockHash)
+    		if big.NewInt(0).Cmp(&hashInt) == 0 {
+    			break
+    		}
+    	}
+    }
+    ```
+
+
+
+## 11. Cli

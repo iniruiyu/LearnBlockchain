@@ -21,59 +21,55 @@ type Blockchain struct {
 
 }
 
-/* type Blockchain struct {
-	Blocks []*Block // 存储有序的区块
-} */
+// 迭代器
+type BlockchainIterator struct {
+	CurrentHash []byte   // 最新区块的hash
+	DB          *bolt.DB // 数据库
+
+}
+
+// 迭代器
+func (blockchain *Blockchain) Iterator() *BlockchainIterator {
+	return &BlockchainIterator{blockchain.Tip, blockchain.DB}
+}
+func (blockchainIterator *BlockchainIterator) NextPrevBlock() *Block {
+	var currentBlock *Block
+	err := blockchainIterator.DB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blockTableName))
+		if b != nil {
+			currentBlockBytes := b.Get(blockchainIterator.CurrentHash)
+			// 获取到当前迭代器Hash对应的区块
+			currentBlock = DeSerializeBlock(currentBlockBytes)
+			blockchainIterator.CurrentHash = currentBlock.PrevBlockHash
+
+		}
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+	return currentBlock
+}
 
 // 遍历输出所有区块的信息
 func (blockchain *Blockchain) PrintBlockchain() {
 
-	var block *Block
-	var currentHash []byte = blockchain.Tip
-	fmt.Println("blockchain.Tip", blockchain.Tip)
+	blockchainIterator := blockchain.Iterator()
 	for {
-		err := blockchain.DB.Update(func(tx *bolt.Tx) error {
-			// 1.表
-			b := tx.Bucket([]byte(blockTableName))
-			if b != nil {
-				// 获取当前区块的字节数组
-				blockBytes := b.Get(currentHash)
-				// 反序列化
-				block = DeSerializeBlock(blockBytes)
+		block := blockchainIterator.NextPrevBlock()
 
-				/* 1. 区块高度
-				Height int64
-				// 2. 上一个区块的hash
-				PrevBlockHash []byte
-				// 3. Data
-				Data []byte
-				// 4. 时间戳
-				Timestamp int64
-				// 5. Hash
-				Hash []byte
-				// 6.Nonce （proof of work）
-				Nonce int64 */
-				fmt.Printf("Height:%d\n", block.Height)
-				fmt.Printf("PrevBlockHash:%x\n", block.PrevBlockHash)
-				fmt.Printf("Data:%s\n", block.Data)
-				//fmt.Printf("Timestamp:%s\n", time.Unix(block.Timestamp, 0).Format("2006-01-02 03:04:05 PM"))
-				fmt.Printf("Timestamp:%s\n", time.Unix(block.Timestamp, 0).Format("2006-01-02 15:04:05 PM"))
-				fmt.Printf("Hash:%x\n", block.Hash)
-				fmt.Printf("Nonce:%d\n\n", block.Nonce)
+		fmt.Printf("Height:%d\n", block.Height)
+		fmt.Printf("PrevBlockHash:%x\n", block.PrevBlockHash)
+		fmt.Printf("Data:%s\n", block.Data)
+		fmt.Printf("Timestamp:%s\n", time.Unix(block.Timestamp, 0).Format("2006-01-02 15:04:05 PM"))
+		fmt.Printf("Hash:%x\n", block.Hash)
+		fmt.Printf("Nonce:%d\n\n", block.Nonce)
 
-			}
-
-			return nil
-		})
-		if err != nil {
-			log.Panic(err)
-		}
 		var hashInt big.Int
 		hashInt.SetBytes(block.PrevBlockHash)
 		if big.NewInt(0).Cmp(&hashInt) == 0 {
 			break
 		}
-		currentHash = block.PrevBlockHash
 	}
 }
 
