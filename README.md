@@ -444,7 +444,7 @@
   			TipBlock := DeSerializeBlock(TipBlockBytes)
   			// 3. Create New Block 
   			newBlock := NewBlock(data, TipBlock.Height+1, TipBlock.Hash)
-              // 4. Serialize New Block ,place it in the obtained table
+  			// 4. Serialize New Block ,place it in the obtained table
   			err := b.Put(newBlock.Hash, newBlock.Serialize())
   			if err != nil {
   				log.Panic(err)
@@ -478,7 +478,7 @@
   			if b != nil {
   				// Gets the byte array of the current block
   				blockBytes := b.Get(currentHash)
-                  // DeSerializeBlock
+  				// DeSerializeBlock
   				block = DeSerializeBlock(blockBytes)
   				fmt.Printf("Height:%d\n", block.Height)
   				fmt.Printf("PrevBlockHash:%x\n", block.PrevBlockHash)
@@ -498,7 +498,7 @@
   		if big.NewInt(0).Cmp(&hashInt) == 0 {
   			break
   		}
-          // Iterate
+  		// Iterate
   		currentHash = block.PrevBlockHash
   	}
   }
@@ -567,3 +567,276 @@ Write an iterator that optimizes the above code to reduce repetition
 
 
 ## 11. Cli
+
+### 11.1 os.Args
+
+* Input
+  * main.exe addBlock -data "block1"
+
+* ```go
+  // main.exe addBlock -data "block1"
+  func main() {
+  	args := os.Args
+  	fmt.Printf("%v\n", args)		// [D:\dev\main.exe addblock -data block1]
+  	fmt.Printf("%v\n", args[1])		// addblock
+  	fmt.Printf("%v\n", args[2])		// -data
+  	fmt.Printf("%v\n", args[2:])	// [-data block1]
+  }
+  ```
+
+
+
+### 11.2 flag
+
+  * input
+
+  * ```go
+    flagString := flag.String("printchain", "string", "输出所有的区块信息")
+    flagInt := flag.Int("number", 5, "输出一个整数")
+    flagBool := flag.Bool("open", false, "判断真假")
+    flag.Parse()
+    fmt.Printf("%s\n", *flagString)		// string
+    fmt.Printf("%d\n", *flagInt)		// 5
+    fmt.Printf("%v\n", *flagBool)		// false
+    ```
+
+
+
+### 11.3 Cli Struct
+
+Cli Struct
+
+```go
+type Cli struct{}
+```
+
+Cli function
+
+* Check OsArgs Valid
+
+  * ```go
+    func isVaildArgs() {
+    	if len(os.Args) < 2 {
+    		printUsage()
+    		os.Exit(1)
+    	}
+    }
+    ```
+
+* Print Cli Cmd
+
+  * ```go
+    func printUsage() {
+    	fmt.Println("Usage:")
+    	fmt.Println("\t createBlockchain -address -地址")
+    	fmt.Println("\t send -from FROM -to TO -amount AMOUNT -交易")
+    	fmt.Println("\t printchain -输出区块信息")
+    	fmt.Println("\t getbalance -address -获取余额")
+    }
+    ```
+
+* ```go
+  func (cli *Cli) Run() {
+  	isVaildArgs()
+  	// 1.printchain
+  	printchainCMD := flag.NewFlagSet("printchain", flag.ExitOnError)
+  	// 2.send
+  	//.\main.exe send -from '[\"address1","address2\"]' -to '[\"address3\",\"address4\"]' -amount '[\"2\",\"3\"]'
+  	sendBlockCMD := flag.NewFlagSet("send", flag.ExitOnError)
+  	flagFrom := sendBlockCMD.String("from", "", "from address....")
+  	flagTo := sendBlockCMD.String("to", "", "to address....")
+  	flagAmount := sendBlockCMD.String("amount", "", "amount....")
+  
+  	//3.createblockchain
+  	createBlockChainCMD := flag.NewFlagSet("createBlockchain", flag.ExitOnError)
+  	createBlockChainWithAddress := createBlockChainCMD.String("address", "", "Genesis Block Address....")
+  
+  	//4.getbalance
+  	getbalanceCMD := flag.NewFlagSet("getbalance", flag.ExitOnError)
+  	getbalanceCMDWithAddress := getbalanceCMD.String("address", "", "Get Address Amount")
+  
+  	switch os.Args[1] {
+  	case "send":
+  		err := sendBlockCMD.Parse(os.Args[2:])
+  		if err != nil {
+  			log.Panic(err)
+  		}
+  	case "printchain":
+  		err := printchainCMD.Parse(os.Args[2:])
+  		if err != nil {
+  			log.Panic(err)
+  		}
+  	case "createBlockchain":
+  		err := createBlockChainCMD.Parse(os.Args[2:])
+  		if err != nil {
+  			log.Panic(err)
+  		}
+  	case "getbalance":
+  		err := getbalanceCMD.Parse(os.Args[2:])
+  		if err != nil {
+  			log.Panic(err)
+  		}
+  	default:
+  		printUsage()
+  		os.Exit(1)
+  	}
+  	if createBlockChainCMD.Parsed() {
+  		if *createBlockChainWithAddress == "" {
+  			fmt.Println("Address == "")
+  			printUsage()
+  			os.Exit(1)
+  		}
+  		cli.CreateGenesisBlockchain(*createBlockChainWithAddress)
+  	}
+  	if sendBlockCMD.Parsed() {
+  		if *flagFrom == "" || *flagTo == "" || *flagAmount == "" {
+  			printUsage()
+  			os.Exit(1)
+  		}
+  		from := block.JSONToArray(*flagFrom)
+  		to := block.JSONToArray(*flagTo)
+  		amount := block.JSONToArray(*flagAmount)
+  		cli.send(from, to, amount)
+  	}
+  	if printchainCMD.Parsed() {
+  		cli.Printchain()
+  	}
+  	if getbalanceCMD.Parsed() {
+  		if *getbalanceCMDWithAddress == "" {
+  			fmt.Println("Address == "")
+  			printUsage()
+  			os.Exit(1)
+  		}
+  		cli.getBalance(*getbalanceCMDWithAddress)
+  	}
+  
+  }
+  ```
+
+
+
+### 11.4 Cli Function
+
+1. Create Genesis Blockchain
+
+   * ```go
+     func (cli *Cli) CreateGenesisBlockchain(address string) {
+     	blockchain := block.CreateBlockchainWithGenesisBlock(address)
+     	defer blockchain.DB.Close()
+     }
+     ```
+
+   * ```go
+     // creates a blockchain with a genesis block
+     func CreateBlockchainWithGenesisBlock(genesisBlockAddress string) *Blockchain {
+     	// Exit if the database exists
+     	if DbExists() {
+     		fmt.Println("Genesis block already exists")
+     		os.Exit(1)
+     		return nil
+     	}
+     	// Create or open the database
+     	db, err := bolt.Open(dbName, 0600, nil)
+     	if err != nil {
+     		log.Fatal(err)
+     	}
+     	// Close the database when the function exits
+     	defer db.Close()
+     
+     	var GenesisBlockHash []byte
+     	err = db.Update(func(tx *bolt.Tx) error {
+     
+     		// Create a bucket
+     		b, err := tx.CreateBucket([]byte(blockTableName))
+     		if err != nil {
+     			log.Panic(err)
+     		}
+     		// Bucket already exists
+     		if b != nil {
+     			// Create the GenesisBlock
+     			// Create a Coinbase Transaction
+     			txCoinbase := NewCoinbaseTransaction(genesisBlockAddress)
+     			GenesisBlock := CreateGenesisBlock([]*Transaction{txCoinbase})
+     			// Store the genesis block in the bucket
+     			err := b.Put(GenesisBlock.Hash, GenesisBlock.Serialize())
+     			if err != nil {
+     				log.Panic(err)
+     			}
+     			// Store the hash of the latest block
+     			err = b.Put([]byte("TipBlockHash"), GenesisBlock.Hash)
+     			if err != nil {
+     				log.Panic(err)
+     			}
+                 // Use to Return
+     			GenesisBlockHash = GenesisBlock.Hash
+     		}
+     
+     		return nil
+     	})
+     	if err != nil {
+     		log.Panic(err)
+     	}
+     	return &Blockchain{GenesisBlockHash, db}
+     }
+     ```
+
+2. Print Block Info
+
+   * ```
+     func (cli *Cli) Printchain() {
+     	if !block.DbExists() {
+     		fmt.Println("Database does not exist")
+     		os.Exit(1)
+     		return
+     	}
+     	blockchain := block.GetBlockObject()
+     	defer blockchain.DB.Close()
+     	blockchain.PrintBlockchain()
+     }
+     ```
+
+   * ```go
+     // PrintBlockchain prints information for all blocks in the blockchain
+     func (blockchain *Blockchain) PrintBlockchain() {
+     	// Initialize the iterator to start from the latest block
+     	blockchainIterator := blockchain.Iterator()
+     	// Iterate over all blocks in the blockchain
+     	for {
+     		// Get the next previous block in the chain
+     		block := blockchainIterator.NextPrevBlock()
+     		// Print the block header information
+     		fmt.Printf("---------------Block Height %d------------------\n", block.Height)
+     		fmt.Printf("PrevBlockHash: %x\n", block.PrevBlockHash)
+     		fmt.Printf("Timestamp: %s\n", time.Unix(block.Timestamp, 0).Format("2006-01-02 15:04:05 PM"))
+     		fmt.Printf("Hash: %x\n", block.Hash)
+     		fmt.Printf("Nonce: %d\n", block.Nonce)
+     
+     		// Print the transactions in the block
+     		fmt.Printf("---------------Block %d - Txs: %v---------------\n", block.Height, len(block.Txs))
+     		for _, tx := range block.Txs {
+     			fmt.Printf("Txs: tx.hash=%x\n", tx.TxHash)
+     			fmt.Printf("Vins →   ")
+     			for _, in := range tx.Vins {
+     				fmt.Printf("in.TxHash: %x, Signature: %x, (in.Vout Index): %d\n",
+     					in.TxHash, in.ScriptSig, in.Vout)
+     			}
+     			fmt.Printf("Vouts→   \n")
+     			for i, out := range tx.Vouts {
+     				fmt.Printf("tx.%d Value: %d, ScriptPublicKey: %s\n", i, out.Value, out.ScriptPublicKey)
+     			}
+     			fmt.Printf("--------------End of Block %d - Tx Ended--------------\n", block.Height)
+     		}
+     		// If the current block's previous hash is zero, it means we've reached the genesis block
+     		if bytes.Equal(block.PrevBlockHash, []byte{}) {
+     			break
+     		}
+     	}
+     }
+     ```
+
+###  That's pretty easy, now we're going to write some trading code.
+
+
+
+## 12. Transaction
+

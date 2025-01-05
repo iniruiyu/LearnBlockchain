@@ -54,21 +54,11 @@ func (proofOfWork *ProofOfWork) Run() ([]byte, int64) {
 		hashInt.SetBytes(hash[:])
 		// 3. 判断hash有效性，如果满足条件，跳出循环
 
-		/*
-			func (x *big.Int) Cmp(y *big.Int) (r int)
-			Cmp compares x and y and returns:
-
-				-1 if x <  y
-				 0 if x == y
-				+1 if x >  y
-		*/
 		if proofOfWork.Target.Cmp(&hashInt) == 1 {
 			fmt.Println()
 			return hash[:], int64(nonce)
 		}
 	}
-	fmt.Println()
-	return nil, 0
 }
 
 // 创建新的工作量证明对象

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -15,40 +16,11 @@ const dbName = "blockchain.db"
 // 表名字
 const blockTableName = "block"
 
+const tipBlockHash = "TipBlockHash"
+
 type Blockchain struct {
 	Tip []byte   // 最新区块的hash
 	DB  *bolt.DB // 数据库
-
-}
-
-// 迭代器
-type BlockchainIterator struct {
-	CurrentHash []byte   // 最新区块的hash
-	DB          *bolt.DB // 数据库
-
-}
-
-// 迭代器
-func (blockchain *Blockchain) Iterator() *BlockchainIterator {
-	return &BlockchainIterator{blockchain.Tip, blockchain.DB}
-}
-func (blockchainIterator *BlockchainIterator) NextPrevBlock() *Block {
-	var currentBlock *Block
-	err := blockchainIterator.DB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blockTableName))
-		if b != nil {
-			currentBlockBytes := b.Get(blockchainIterator.CurrentHash)
-			// 获取到当前迭代器Hash对应的区块
-			currentBlock = DeSerializeBlock(currentBlockBytes)
-			blockchainIterator.CurrentHash = currentBlock.PrevBlockHash
-
-		}
-		return nil
-	})
-	if err != nil {
-		log.Panic(err)
-	}
-	return currentBlock
 }
 
 // 遍历输出所有区块的信息
@@ -86,44 +58,86 @@ func (blockchain *Blockchain) AddBlockToBlockchain(data string) {
 			TipBlock := DeSerializeBlock(TipBlockBytes)
 			// 3. 将区块序列化并且存储到数据库中
 			newBlock := NewBlock(data, TipBlock.Height+1, TipBlock.Hash)
+			// 更新区块链Tip为最新的hash
 			blockchain.Tip = newBlock.Hash
 			err := b.Put(newBlock.Hash, newBlock.Serialize())
 			if err != nil {
 				log.Panic(err)
 			}
 			// 存储最新的区块的hash
-			err = b.Put([]byte("TipBlockHash"), newBlock.Hash)
+			err = b.Put([]byte(tipBlockHash), newBlock.Hash)
 			if err != nil {
 				log.Panic(err)
 			}
 		}
-
 		return nil
 	})
 
 }
 
-// 创建区块链的方法
-
 // 创建带有创世区块的区块链
-func CreateBlockchainWithGenesisBlock() *Blockchain {
-	var blockHash []byte
+func CreateBlockchainWithGenesisBlock(genesisBlockData string) {
+	/* var blockHash []byte
+
+	var blockchain *Blockchain
+	if dbExists() {
+		// 创建或者打开数据库
+		db, err := bolt.Open(dbName, 0600, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("GensisBlock alredy Existed")
+		err = db.View(func(tx *bolt.Tx) error {
+			// 获取表
+			b := tx.Bucket([]byte(blockTableName))
+			if b == nil {
+				log.Panic(b)
+			}
+			tipHash := b.Get([]byte(tipBlockHash))
+			if tipHash != nil {
+				blockchain = &Blockchain{tipHash, db}
+			}
+			return nil
+		})
+		if err != nil {
+			log.Panic(err)
+		}
+
+	} */
+	//数据库存在直接退出
+	if DbExists() {
+		fmt.Println("创世区块已经存在")
+		os.Exit(1)
+		return
+	}
 	// 创建或者打开数据库
 	db, err := bolt.Open(dbName, 0600, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 	//defer db.Close()  关闭不放在这里
 	err = db.Update(func(tx *bolt.Tx) error {
-		//创建数据库表
+
+		// 创建表
 		b, err := tx.CreateBucket([]byte(blockTableName))
 		if err != nil {
 			log.Panic(err)
 		}
+
+		// 获取表
+		/* 		b := tx.Bucket([]byte(blockTableName))
+		   		if b == nil {
+		   			//创建数据库表
+		   			b, err = tx.CreateBucket([]byte(blockTableName))
+		   			if err != nil {
+		   				log.Panic(err)
+		   			}
+		   		} */
 		//表存在了
 		if b != nil {
 			// 创建 GenisisBlock
-			GenesisBlock := CreateGenesisBlock("Genesis block Data...")
+			GenesisBlock := CreateGenesisBlock(genesisBlockData)
 			// 将创世区块存储到表当中
 			err := b.Put(GenesisBlock.Hash, GenesisBlock.Serialize())
 			if err != nil {
@@ -134,11 +148,41 @@ func CreateBlockchainWithGenesisBlock() *Blockchain {
 			if err != nil {
 				log.Panic(err)
 			}
-			blockHash = GenesisBlock.Hash
 		}
 
 		return nil
 	})
+	if err != nil {
+		log.Panic(err)
+	}
+}
 
-	return &Blockchain{blockHash, db}
+// 判断数据库是否存在
+func DbExists() bool {
+	if _, err := os.Stat(dbName); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+// 获取blockchain对象
+func GetBlockObject() *Blockchain {
+	db, err := bolt.Open(dbName, 0600, nil)
+	if err != nil {
+		log.Panic(err)
+	}
+	var TipHash []byte
+	err = db.View(func(tx *bolt.Tx) error {
+
+		b := tx.Bucket([]byte(blockTableName))
+		if b != nil {
+			//最新区块哈希
+			TipHash = b.Get([]byte("TipBlockHash"))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil
+	}
+	return &Blockchain{TipHash, db}
 }
