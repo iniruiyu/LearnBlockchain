@@ -1,7 +1,7 @@
 package main
 
 import (
-	block "iniyou.com/BLOCK"
+	cli "iniyou.com/cli"
 )
 
 // persistance
@@ -12,6 +12,6 @@ func main() {
 	//Blockchain := block.CreateBlockchainWithGenesisBlock()
 	//defer Blockchain.DB.Close()
 
-	Cli := block.Cli{}
+	Cli := cli.Cli{}
 	Cli.Run()
 }

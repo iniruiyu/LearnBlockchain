@@ -1,4 +1,4 @@
-package block
+package blockchain
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ func (pow *ProofOfWork) prepareData(nonce int) []byte {
 	data := bytes.Join(
 		[][]byte{
 			pow.Block.PrevBlockHash,
-			pow.Block.Data,
+			pow.Block.HashTransactions(),
 			IntToHex(pow.Block.Timestamp),
 			IntToHex(int64(pow.Block.Height)),
 			IntToHex(int64(targetBit)),
